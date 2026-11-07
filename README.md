@@ -17,18 +17,33 @@ The rest of the trackpad works as before. A gesture only starts on a physical cl
 
 - macOS 14 Sonoma or later
 - An Apple trackpad, built in or Magic Trackpad. The haptic ticks need a Force Touch model.
-- Xcode 16 or later. I build with Xcode 26.
 
-## Build and install
+## Install
+
+Paste this into Terminal:
 
 ```sh
-brew install xcodegen         # only needed after adding or removing source files
-scripts/install.sh            # builds Release, copies it to /Applications and opens it
+curl -fsSL https://raw.githubusercontent.com/gabesgh/ledge/main/install.sh | bash
+```
+
+It downloads the latest release, checks it against its checksum and puts Ledge in /Applications. Run the same line again to update. The script is about 60 lines, so give [install.sh](install.sh) a read first if piping into bash makes you uneasy.
+
+The first launch opens a welcome guide that asks for Accessibility access, under System Settings › Privacy & Security › Accessibility. Ledge can't do anything until you turn that on.
+
+Why Terminal and not a download button? Ledge is free, and it isn't signed with a paid Apple Developer ID, so macOS blocks it when it comes from a browser. Files fetched with curl don't get that flag. If you'd still rather download `Ledge.zip` from the [Releases page](https://github.com/gabesgh/ledge/releases), macOS refuses to open it the first time. Go to System Settings › Privacy & Security, find the message about Ledge, and click Open Anyway.
+
+macOS treats every release as a new app, so you grant Accessibility again after each update. The installer clears the old entry so the prompt comes back cleanly.
+
+## Build from source
+
+You need Xcode 16 or later. I build with Xcode 26.
+
+```sh
+brew install xcodegen             # only needed after adding or removing source files
+scripts/build-and-install.sh      # builds Release, copies it to /Applications and opens it
 ```
 
 You can also open `Ledge.xcodeproj` and run the `Ledge` scheme.
-
-The first launch opens a welcome guide that asks for Accessibility access, under System Settings › Privacy & Security › Accessibility. Ledge can't do anything until you turn that on.
 
 ### Signing
 
@@ -91,6 +106,16 @@ Ledge depends on two private frameworks, `MultitouchSupport` and `MediaRemote`. 
 
 The haptic waveform IDs 3, 4 and 6 come from community reverse engineering of `MTActuatorActuate`, not from Apple. If a strength feels off, change `HapticStrength.actuationID`.
 
+## Releasing
+
+Tag a version and push the tag:
+
+```sh
+git tag v1.1.0 && git push origin v1.1.0
+```
+
+The Release workflow builds Ledge on GitHub's macOS runners and attaches `Ledge.zip` to a new GitHub Release, which is what the installer downloads. Running the workflow by hand from the Actions tab builds without publishing anything.
+
 ## Project layout
 
 ```
@@ -101,7 +126,9 @@ Ledge/
   UI/         Settings tabs, welcome guide, live trackpad preview, seek HUD, shortcut recorder
   Bridge/     Headers for the private MultitouchSupport and MediaRemote frameworks
 Config/       Signing.xcconfig, plus your git-ignored Local.xcconfig
-scripts/      install.sh, make-icon.swift
+scripts/      build-and-install.sh, make-icon.swift
+.github/      Release workflow
+install.sh    The one-line installer
 project.yml   XcodeGen spec. Regenerate the project with `xcodegen generate`.
 ```
 

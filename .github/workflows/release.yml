@@ -1,0 +1,61 @@
+name: Release
+
+# Push a tag like v1.2.0 to build Ledge and publish it as a GitHub Release.
+# Run it by hand (Actions › Release › Run workflow) to test a build without publishing.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: xcodebuild -version
+
+      - name: Work out the version
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=0.0.0-dev" >> "$GITHUB_ENV"
+          fi
+
+      # Signed ad hoc (Config/Signing.xcconfig): no Apple Developer account needed.
+      - name: Build
+        run: |
+          xcodebuild -project Ledge.xcodeproj -scheme Ledge -configuration Release \
+            -derivedDataPath build/DerivedData \
+            MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
+            build
+
+      - name: Package
+        run: |
+          APP=build/DerivedData/Build/Products/Release/Ledge.app
+          codesign --verify --deep --strict "$APP"
+          lipo -archs "$APP/Contents/MacOS/Ledge"
+          ditto -c -k --keepParent "$APP" Ledge.zip
+          shasum -a 256 Ledge.zip | tee Ledge.zip.sha256
+
+      - name: Keep the build (manual runs)
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ledge
+          path: |
+            Ledge.zip
+            Ledge.zip.sha256
+
+      - name: Publish release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" Ledge.zip Ledge.zip.sha256 \
+            --title "Ledge $VERSION" --generate-notes

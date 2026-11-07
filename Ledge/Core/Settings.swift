@@ -67,6 +67,19 @@ enum ModifierRequirement: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+enum MenuBarIconMode: String, Codable, CaseIterable, Identifiable {
+    case always, autoHide, hidden
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .always: return "Always shown"
+        case .autoHide: return "Hidden 5 seconds after you leave Ledge"
+        case .hidden: return "Hidden"
+        }
+    }
+}
+
 enum HapticStrength: String, Codable, CaseIterable, Identifiable {
     case off, light, medium, strong
     var id: String { rawValue }
@@ -191,7 +204,8 @@ struct Settings: Codable, Equatable {
     var topLeft = CornerBinding.muteOnClick
     var topRight = CornerBinding()
 
-    var showMenuBarIcon = true
+    var menuBarIcon: MenuBarIconMode = .always
+    var autoHideExplained = false
     var onboardingDone = false
     var diagnosticLog = false
 
@@ -262,6 +276,10 @@ final class Prefs: ObservableObject {
         else { return Settings() }
 
         merged.merge(stored) { _, stored in stored }
+        // Before auto-hide existed, the icon was a plain on/off switch.
+        if stored["menuBarIcon"] == nil, let shown = stored["showMenuBarIcon"] as? Bool {
+            merged["menuBarIcon"] = shown ? MenuBarIconMode.always.rawValue : MenuBarIconMode.hidden.rawValue
+        }
         guard
             let mergedData = try? JSONSerialization.data(withJSONObject: merged),
             let settings = try? JSONDecoder().decode(Settings.self, from: mergedData)

@@ -62,9 +62,11 @@ private struct GeneralTab: View {
                 Toggle("Enable Ledge", isOn: $prefs.settings.enabled)
                 Toggle("Launch at login", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, value in LoginItem.set(value) }
-                Toggle("Show icon in the menu bar", isOn: $prefs.settings.showMenuBarIcon)
-                if !prefs.settings.showMenuBarIcon {
-                    Text("Open Ledge again from Applications or Spotlight to get back to these settings.")
+                Picker("Menu bar icon", selection: $prefs.settings.menuBarIcon) {
+                    ForEach(MenuBarIconMode.allCases) { Text($0.title).tag($0) }
+                }
+                if prefs.settings.menuBarIcon != .always {
+                    Text("Open Ledge again from Applications or Spotlight to bring the icon and these settings back.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

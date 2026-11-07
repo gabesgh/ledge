@@ -4,11 +4,19 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let statusLine = NSMenuItem(title: "", action: nil, keyEquivalent: "")
     private let enabledItem = NSMenuItem(title: "Enabled", action: #selector(toggleEnabled), keyEquivalent: "")
+    private let autoHideItem = NSMenuItem(title: "Auto-hide Menu Bar Icon", action: #selector(toggleAutoHide), keyEquivalent: "")
+
+    /// How long the icon lingers after you leave Ledge, in auto-hide mode.
+    private static let autoHideDelay: TimeInterval = 5
+    private var mode: MenuBarIconMode = .always
+    private var menuOpen = false
+    private var hideWork: DispatchWorkItem?
 
     override init() {
         super.init()
         item.button?.image = StatusItemController.icon(active: true)
         item.button?.toolTip = "Ledge"
+        item.autosaveName = "LedgeStatusItem"   // keeps its spot when it reappears
 
         let menu = NSMenu()
         menu.delegate = self
@@ -24,6 +32,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
         enabledItem.target = self
         menu.addItem(enabledItem)
+        autoHideItem.target = self
+        menu.addItem(autoHideItem)
         menu.addItem(.separator())
 
         menu.addItem(makeItem("Settings…", #selector(openSettings), key: ","))
@@ -35,11 +45,43 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         NotificationCenter.default.addObserver(forName: .ledgeStatusChanged, object: nil, queue: .main) { [weak self] _ in
             self?.refresh()
         }
+        for name in [NSApplication.didBecomeActiveNotification, NSApplication.didResignActiveNotification] {
+            NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                self?.updateVisibility()
+            }
+        }
         refresh()
     }
 
-    func setVisible(_ visible: Bool) {
-        item.isVisible = visible
+    func apply(_ mode: MenuBarIconMode) {
+        self.mode = mode
+        autoHideItem.state = mode == .autoHide ? .on : .off
+        updateVisibility()
+    }
+
+    /// In auto-hide mode the icon stays while Ledge is in front or its menu is
+    /// open, and goes a few seconds after you move on.
+    private func updateVisibility() {
+        hideWork?.cancel()
+        hideWork = nil
+
+        switch mode {
+        case .always:
+            item.isVisible = true
+        case .hidden:
+            item.isVisible = false
+        case .autoHide:
+            if NSApp.isActive || menuOpen {
+                item.isVisible = true
+                return
+            }
+            let work = DispatchWorkItem { [weak self] in
+                guard let self, self.mode == .autoHide, !NSApp.isActive, !self.menuOpen else { return }
+                self.item.isVisible = false
+            }
+            hideWork = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.autoHideDelay, execute: work)
+        }
     }
 
     private func makeItem(_ title: String, _ action: Selector, key: String = "") -> NSMenuItem {
@@ -51,6 +93,16 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         AppStatus.shared.refresh()
         refresh()
+    }
+
+    func menuWillOpen(_ menu: NSMenu) {
+        menuOpen = true
+        updateVisibility()
+    }
+
+    func menuDidClose(_ menu: NSMenu) {
+        menuOpen = false
+        updateVisibility()
     }
 
     private func refresh() {
@@ -66,6 +118,21 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         Prefs.shared.settings.enabled.toggle()
         if !Prefs.shared.settings.enabled { GestureEngine.shared.reset() }
         refresh()
+    }
+
+    @objc private func toggleAutoHide() {
+        let turningOn = Prefs.shared.settings.menuBarIcon != .autoHide
+        Prefs.shared.settings.menuBarIcon = turningOn ? .autoHide : .always
+        guard turningOn, !Prefs.shared.settings.autoHideExplained else { return }
+
+        // Say once how to get the icon back, before it disappears.
+        Prefs.shared.settings.autoHideExplained = true
+        let alert = NSAlert()
+        alert.messageText = "The menu bar icon will hide itself"
+        alert.informativeText = "It disappears 5 seconds after you leave Ledge. To bring it back, open Ledge again from Spotlight or the Applications folder."
+        alert.addButton(withTitle: "OK")
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
     }
 
     @objc private func openSettings() { WindowManager.shared.showSettings() }

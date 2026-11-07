@@ -77,7 +77,7 @@ Firefox and the browsers built on it don't offer this kind of scripting, so on 1
 
 ## Settings
 
-General has the on/off switch, launch at login, haptic strength, a live view of your trackpad and its zones, and an option to hide the menu bar icon. With the icon hidden, open Ledge again from Applications to get back to settings.
+General has the on/off switch, launch at login, haptic strength and a live view of your trackpad and its zones. It also sets the menu bar icon to always show, stay hidden, or hide itself 5 seconds after you leave Ledge. The last option is also in the icon's own menu. While the icon is hidden, open Ledge again from Spotlight or Applications to bring it back.
 
 Gestures turns each edge on or off, swaps sides, sets the edge width and the distance per step, limits the side edges to their lower half or quarter, requires a modifier key, and sets how much time a full-width slide covers.
 

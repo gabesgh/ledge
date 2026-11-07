@@ -29,9 +29,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         statusItem = StatusItemController()
         Prefs.shared.$settings
-            .map(\.showMenuBarIcon)
+            .map(\.menuBarIcon)
             .removeDuplicates()
-            .sink { [weak self] visible in self?.statusItem?.setVisible(visible) }
+            .sink { [weak self] mode in self?.statusItem?.apply(mode) }
             .store(in: &cancellables)
 
         let settings = Prefs.shared.settings

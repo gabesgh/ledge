@@ -1,0 +1,14 @@
+// Code signing for Ledge.
+//
+// By default the app is signed ad hoc, so anyone can build it. macOS then asks
+// for Accessibility again after every rebuild, because the signature changes.
+//
+// To keep the grant across rebuilds, sign with your own certificate:
+//   cp Config/Local.xcconfig.example Config/Local.xcconfig
+// and fill in your team ID. Local.xcconfig is git-ignored.
+
+CODE_SIGN_STYLE = Manual
+CODE_SIGN_IDENTITY = -
+DEVELOPMENT_TEAM =
+
+#include? "Local.xcconfig"

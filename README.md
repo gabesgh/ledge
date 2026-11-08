@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/images/icon.png" width="128" height="128" alt="Ledge app icon"></p>
+
 # Ledge
 
 Ledge turns the edges of your Mac trackpad into controls for volume, brightness, media playback and shortcuts. It's an open-source rebuild of [MacEdge](https://macedge.site/), written from scratch in Swift, and it lives in the menu bar.
